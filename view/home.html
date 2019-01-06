@@ -10,25 +10,37 @@
 
 <body>
   <h1>Home</h1>
+  <pre id="response"></pre>
+  <input type="button" onclick="closeEvent()" value="Close Event Source" />
   <script>
-    var ws = new WebSocket(`ws://${window.location.host}`)
-    ws.onopen = event => {
-      console.log(`websocket open event`)
-      ws.send(`onopen at ${new Date()}`)
+    let responseElement = document.querySelector("#response")
+    
+    if (!window.EventSource) {
+      throw new Error("This page requires EventSource support")
     }
-    ws.onmessage = event => {
-      console.log(`receive a server event: ${event.data}`)
-      ws.send(`onmessage at ${new Date()}`)
-    }
-    ws.onclose = event => {
-      console.log(`websocket close event`)
-      ws.send(`onclose at ${new Date()}`)
-    }
-    ws.onerror = event => {
-      console.log(`websocket error event`)
-      ws.send(`onerror at ${new Date()}`)
-    }
+    let url = `${window.location.protocol}//${window.location.host}/sse/apple`
+    let source = window.source = new EventSource(url);
+    source.addEventListener('whatever-event', function (e) {
+      console.log(`whatever-event: ${e.data}`);
+      responseElement.textContent = `event: ${e.type}\ndata: ${e.data}`
+    }, false);
 
+    source.addEventListener('open', function (e) {
+      console.log("open");
+      responseElement.textContent = `open`
+    }, false);
+
+    source.addEventListener('error', function (e) {
+      console.log("error");
+      responseElement.textContent = `error`
+      if (e.readyState == EventSource.CLOSED) {
+      }
+    }, false);
+
+    function closeEvent () {
+      console.log("closeEvent")
+      source.close()
+    }
   </script>
 </body>
 
