@@ -12,36 +12,7 @@
   <h1>Home</h1>
   <pre id="response"></pre>
   <input type="button" onclick="closeEvent()" value="Close Event Source" />
-  <script>
-    let responseElement = document.querySelector("#response")
-    
-    if (!window.EventSource) {
-      throw new Error("This page requires EventSource support")
-    }
-    let url = `${window.location.protocol}//${window.location.host}/sse/apple`
-    let source = window.source = new EventSource(url);
-    source.addEventListener('whatever-event', function (e) {
-      console.log(`whatever-event: ${e.data}`);
-      responseElement.textContent = `event: ${e.type}\ndata: ${e.data}`
-    }, false);
-
-    source.addEventListener('open', function (e) {
-      console.log("open");
-      responseElement.textContent = `open`
-    }, false);
-
-    source.addEventListener('error', function (e) {
-      console.log("error");
-      responseElement.textContent = `error`
-      if (e.readyState == EventSource.CLOSED) {
-      }
-    }, false);
-
-    function closeEvent () {
-      console.log("closeEvent")
-      source.close()
-    }
-  </script>
+  <script src="assets/main.js"></script>
 </body>
 
 </html>

@@ -1,6 +1,7 @@
 const Koa = require('koa')
 const Router = require('koa-router')
 const render = require('koa-ejs')
+const serve = require('koa-static')
 const path = require('path')
 
 const app = new Koa()
@@ -22,5 +23,7 @@ router.get('/home', async ctx => {
 sse(router)
 
 app.use(router.routes())
+
+app.use(serve('public'))
 
 app.listen(3000)
