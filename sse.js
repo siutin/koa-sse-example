@@ -1,54 +1,51 @@
 const PassThrough = require('stream').PassThrough
-
-var globalCount = 0
-
-const sse = (event, data) => `event:${ event }\ndata: ${ data }\n\n`
 const randomStrings = () => Math.random().toString(36).substr(2, 5)
+const eventStreamFormat = (event, data) => `event: ${ event }\ndata: ${ data }\n\n`
+const send = ({ clientId, type, msg }) => clients[clientId].res.write(eventStreamFormat(type, msg))
+
+var clientId = 0
+var clients = {}  // <- Keep a map of attached clients
 
 module.exports = function(router) {
 
     router.get('/sse/:name', async ctx => {
 
-        let isForever = true
-        let localCount = 0
         const stream = new PassThrough()
 
-        const send = ({ type, msg }) => stream.write(sse(type, msg))
-
         ctx.type = 'text/event-stream'
-        ctx.body = stream;
+        ctx.body = stream
 
-        ['close', 'finish', 'error'].forEach(eventName => {
-            ctx.req.on(eventName, () => {
-                console.log(eventName)
-                isForever = false
-                ctx.res.end()
-            })
-        })
+        ctx.req.socket.setTimeout(Number.MAX_VALUE) // HTTP Keep-Alive
+        ctx.res.write('\n');
 
-        const { name } = ctx.params
-
-        if (!name) {
-            send({ type: 'error-event', msg: JSON.stringify({ reason: 'miss "name" param' }) })
-        }
-
-        let timer = null
-        timer = setInterval(() => {
-            if (isForever) {
-                let message = {
-                    name: name,
-                    current_time: new Date(),
-                    body: `hello ${ randomStrings() }`,
-                    globalCount: globalCount++,
-                    localCount: localCount++
-                }
-                send({
-                    type: 'whatever-event',
-                    msg: JSON.stringify(message)
+        (function(clientId) {
+            clients[clientId] = ctx; // attach this client
+            ['close', 'finish', 'error'].forEach(eventName => {
+                ctx.req.on(eventName, () => {
+                    console.log(`eventName: ${ eventName } clientId: ${ clientId }`)
+                    ctx.res.end()
+                    delete clients[clientId]
                 })
-            } else {
-                clearInterval(timer)
-            }
-        }, 1000)
+            }) // remove client when it disconnects
+        })(++clientId)
+
     })
+
+    setInterval(() => {
+        console.log('Clients: ' + Object.keys(clients))
+        for (clientId in clients) {
+
+            const { name } = clients[clientId].params
+            
+            let message = {
+                clientId,
+                name: name,
+                body: randomStrings(),
+                clientCount: Object.keys(clients).length,
+                currentTime: new Date()
+            }
+
+            send({ clientId, type: 'whatever-event', msg: JSON.stringify(message) })
+        }
+    }, 1000)
 }
